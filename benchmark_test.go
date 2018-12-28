@@ -19,7 +19,6 @@ func BenchmarkSingleRun(b *testing.B) {
 
 	args := arguments.ParsedArguments{
 		GenerateInterfaceAndShimFromPackageDirectory: false,
-		SourcePackageDir:       workingDir,
 		PackagePath:            workingDir,
 		OutputPath:             filepath.Join(workingDir, "fixturesfakes", "fake_something.go"),
 		DestinationPackageName: "fixturesfakes",

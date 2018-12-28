@@ -1,8 +1,10 @@
 package arguments
 
 import (
+	"fmt"
 	"go/build"
 	"log"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -10,34 +12,26 @@ import (
 	"unicode"
 )
 
-//go:generate counterfeiter . ArgumentParser
-type ArgumentParser interface {
-	ParseArguments(...string) ParsedArguments
+type Parser struct {
+	currentWorkingDir string
+	pathResolver      func(string, string) (string, error)
 }
 
-func NewArgumentParser(
-	failHandler FailHandler,
-	currentWorkingDir string,
-	symlinkEvaler SymlinkEvaler,
-	fileStatReader FileStatReader,
-) ArgumentParser {
-	return &argumentParser{
-		failHandler:       failHandler,
+func NewParser(currentWorkingDir string) *Parser {
+	return &Parser{
 		currentWorkingDir: currentWorkingDir,
-		symlinkEvaler:     symlinkEvaler,
-		fileStatReader:    fileStatReader,
+		pathResolver:      getSourcePath,
 	}
 }
 
-func (argParser *argumentParser) ParseArguments(args ...string) ParsedArguments {
+func (argParser *Parser) ParseArguments(args ...string) (ParsedArguments, error) {
 	if *packageFlag {
 		return argParser.parsePackageArgs(args...)
-	} else {
-		return argParser.parseInterfaceArgs(args...)
 	}
+	return argParser.parseInterfaceArgs(args...)
 }
 
-func (argParser *argumentParser) parseInterfaceArgs(args ...string) ParsedArguments {
+func (argParser *Parser) parseInterfaceArgs(args ...string) (ParsedArguments, error) {
 	var interfaceName string
 	var outputPathFlagValue string
 	var rootDestinationDir string
@@ -49,8 +43,13 @@ func (argParser *argumentParser) parseInterfaceArgs(args ...string) ParsedArgume
 	}
 
 	if len(args) > 1 {
+		var err error
+		sourcePackageDir, err = argParser.pathResolver(argParser.currentWorkingDir, args[0])
+		if err != nil {
+			return ParsedArguments{}, err
+		}
+
 		interfaceName = args[1]
-		sourcePackageDir = argParser.getSourceDir(args[0])
 		rootDestinationDir = sourcePackageDir
 	} else {
 		fullyQualifiedInterface := strings.Split(args[0], ".")
@@ -78,19 +77,18 @@ func (argParser *argumentParser) parseInterfaceArgs(args ...string) ParsedArgume
 	log.Printf("Parsed Arguments:\nInterface Name: %s\nPackage Path: %s\nDestination Package Name: %s", interfaceName, packagePath, packageName)
 	return ParsedArguments{
 		GenerateInterfaceAndShimFromPackageDirectory: false,
-		SourcePackageDir: sourcePackageDir,
-		OutputPath:       outputPath,
-		PackagePath:      packagePath,
+		OutputPath:  outputPath,
+		PackagePath: packagePath,
 
 		InterfaceName:          interfaceName,
 		DestinationPackageName: packageName,
 		FakeImplName:           fakeImplName,
 
 		PrintToStdOut: any(args, "-"),
-	}
+	}, nil
 }
 
-func (argParser *argumentParser) parsePackageArgs(args ...string) ParsedArguments {
+func (argParser *Parser) parsePackageArgs(args ...string) (ParsedArguments, error) {
 	packagePath := args[0]
 	packageName := path.Base(packagePath) + "shim"
 
@@ -105,28 +103,19 @@ func (argParser *argumentParser) parsePackageArgs(args ...string) ParsedArgument
 	log.Printf("Parsed Arguments:\nPackage Name: %s\nDestination Package Name: %s", packagePath, packageName)
 	return ParsedArguments{
 		GenerateInterfaceAndShimFromPackageDirectory: true,
-		SourcePackageDir:       packagePath,
 		OutputPath:             outputPath,
 		PackagePath:            packagePath,
 		DestinationPackageName: packageName,
 		FakeImplName:           strings.ToUpper(path.Base(packagePath))[:1] + path.Base(packagePath)[1:],
 		PrintToStdOut:          any(args, "-"),
-	}
-}
-
-type argumentParser struct {
-	failHandler       FailHandler
-	currentWorkingDir string
-	symlinkEvaler     SymlinkEvaler
-	fileStatReader    FileStatReader
+	}, nil
 }
 
 type ParsedArguments struct {
 	GenerateInterfaceAndShimFromPackageDirectory bool
 
-	SourcePackageDir string // abs path to the dir containing the interface to fake
-	PackagePath      string // package path to the package containing the interface to fake
-	OutputPath       string // path to write the fake file to
+	PackagePath string // package path to the package containing the interface to fake
+	OutputPath  string // path to write the fake file to
 
 	DestinationPackageName string // often the base-dir for OutputPath but must be a valid package name
 
@@ -156,7 +145,7 @@ func getFakeName(interfaceName, arg string) string {
 
 var camelRegexp = regexp.MustCompile("([a-z])([A-Z])")
 
-func (argParser *argumentParser) getOutputPath(rootDestinationDir, fakeName, outputPathFlagValue string) string {
+func (argParser *Parser) getOutputPath(rootDestinationDir, fakeName, outputPathFlagValue string) string {
 	if outputPathFlagValue == "" {
 		snakeCaseName := strings.ToLower(camelRegexp.ReplaceAllString(fakeName, "${1}_${2}"))
 		return filepath.Join(rootDestinationDir, packageNameForPath(rootDestinationDir), snakeCaseName+".go")
@@ -173,26 +162,25 @@ func packageNameForPath(pathToPackage string) string {
 	return packageName + "fakes"
 }
 
-func (argParser *argumentParser) getSourceDir(path string) string {
+func getSourcePath(workingDir, path string) (string, error) {
 	if !filepath.IsAbs(path) {
-		path = filepath.Join(argParser.currentWorkingDir, path)
+		path = filepath.Join(workingDir, path)
 	}
 
-	evaluatedPath, err := argParser.symlinkEvaler(path)
+	evaluatedPath, err := filepath.EvalSymlinks(path)
 	if err != nil {
-		argParser.failHandler("No such file/directory/package: '%s'", path)
+		return "", fmt.Errorf("No such file/directory/package: '%s'", path)
 	}
 
-	stat, err := argParser.fileStatReader(evaluatedPath)
+	stat, err := os.Stat(evaluatedPath)
 	if err != nil {
-		argParser.failHandler("No such file/directory/package: '%s'", path)
+		return "", fmt.Errorf("No such file/directory/package: '%s'", path)
 	}
 
-	if !stat.IsDir() {
-		return filepath.Dir(path)
-	} else {
-		return path
+	if stat.IsDir() {
+		return path, nil
 	}
+	return filepath.Dir(path), nil
 }
 
 func any(slice []string, needle string) bool {
@@ -214,5 +202,3 @@ func restrictToValidPackageName(input string) string {
 		}
 	}, input)
 }
-
-type FailHandler func(string, ...interface{})

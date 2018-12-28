@@ -58,13 +58,11 @@ func run() error {
 		return errors.New("Error - couldn't determine current working directory")
 	}
 
-	argumentParser := arguments.NewArgumentParser(
-		fail,
-		cwd,
-		filepath.EvalSymlinks,
-		os.Stat,
-	)
-	parsedArgs := argumentParser.ParseArguments(args...)
+	argumentParser := arguments.NewParser(cwd)
+	parsedArgs, err := argumentParser.ParseArguments(args...)
+	if err != nil {
+		return err
+	}
 	return generate(cwd, parsedArgs)
 }
 
