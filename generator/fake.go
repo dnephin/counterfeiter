@@ -3,6 +3,7 @@ package generator
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"go/types"
 	"log"
 	"strings"
@@ -28,9 +29,8 @@ type Fake struct {
 	Mode               FakeMode
 	DestinationPackage string
 	Name               string
-	TargetAlias        string
+	TargetImport       Import
 	TargetName         string
-	TargetPackage      string
 	Imports            Imports
 	Methods            []Method
 	Function           Method
@@ -49,7 +49,6 @@ type Method struct {
 func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName string, destinationPackage string, workingDir string) (*Fake, error) {
 	f := &Fake{
 		TargetName:         targetName,
-		TargetPackage:      packagePath,
 		Name:               fakeName,
 		Mode:               fakeMode,
 		DestinationPackage: destinationPackage,
@@ -58,7 +57,7 @@ func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName 
 	}
 
 	f.Imports.Add("sync", "sync")
-	pkgs, err := f.loadPackages()
+	pkgs, err := f.loadPackages(packagePath)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,7 @@ func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName 
 	// TODO: Package mode here
 	pkg, err := f.findPackage(pkgs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to find %s: %v", packagePath, err)
 	}
 
 	switch {
@@ -135,7 +134,7 @@ func (f *Fake) Generate(runImports bool) ([]byte, error) {
 		tmpl = template.Must(template.New("fake").Funcs(functionFuncs).Parse(functionTemplate))
 	}
 	if f.Mode == Package {
-		log.Printf("Writing fake %s for package %s to package %s\n", f.Name, f.TargetPackage, f.DestinationPackage)
+		log.Printf("Writing fake %s for package %s to package %s\n", f.Name, f.TargetImport.PkgPath, f.DestinationPackage)
 		tmpl = template.Must(template.New("fake").Funcs(packageFuncs).Parse(packageTemplate))
 	}
 	if tmpl == nil {

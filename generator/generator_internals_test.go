@@ -48,9 +48,8 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 				f, err = NewFake(InterfaceOrFunction, "FileInfo", "os", "FakeFileInfo", "osfakes", "")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(f).NotTo(BeNil())
-				Expect(f.TargetAlias).To(Equal("os"))
+				Expect(f.TargetImport).To(Equal(Import{Alias: "os", PkgPath: "os"}))
 				Expect(f.TargetName).To(Equal("FileInfo"))
-				Expect(f.TargetPackage).To(Equal("os"))
 				Expect(f.Name).To(Equal("FakeFileInfo"))
 				Expect(f.Mode).To(Equal(InterfaceOrFunction))
 				Expect(f.DestinationPackage).To(Equal("osfakes"))
@@ -77,9 +76,8 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(f).NotTo(BeNil())
-				Expect(f.TargetAlias).To(Equal("http"))
+				Expect(f.TargetImport).To(Equal(Import{Alias: "http", PkgPath: "net/http"}))
 				Expect(f.TargetName).To(Equal("HandlerFunc"))
-				Expect(f.TargetPackage).To(Equal("net/http"))
 				Expect(f.Name).To(Equal("FakeHandlerFunc"))
 				Expect(f.Mode).To(Equal(InterfaceOrFunction))
 				Expect(f.DestinationPackage).To(Equal("httpfakes"))
@@ -144,9 +142,8 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 			when("the target is an interface", func() {
 				it.Before(func() {
 					f.Mode = InterfaceOrFunction
-					f.TargetPackage = "os"
 					f.TargetName = "FileInfo"
-					pkgs, err := f.loadPackages()
+					pkgs, err := f.loadPackages("os")
 					Expect(err).NotTo(HaveOccurred())
 					_, err = f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
@@ -164,9 +161,8 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 			when("the target is a function", func() {
 				it.Before(func() {
 					f.Mode = InterfaceOrFunction
-					f.TargetPackage = "net/http"
 					f.TargetName = "HandlerFunc"
-					pkgs, err := f.loadPackages()
+					pkgs, err := f.loadPackages("net/http")
 					Expect(err).NotTo(HaveOccurred())
 					_, err = f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
@@ -184,9 +180,8 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 			when("the target is a struct", func() {
 				it.Before(func() {
 					f.Mode = InterfaceOrFunction
-					f.TargetPackage = "net/http"
 					f.TargetName = "Client"
-					pkgs, err := f.loadPackages()
+					pkgs, err := f.loadPackages("net/http")
 					Expect(err).NotTo(HaveOccurred())
 					_, err = f.findPackage(pkgs)
 					Expect(err).To(HaveOccurred())
@@ -209,9 +204,8 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 
 			when("targeting the os.FileInfo interface", func() {
 				it.Before(func() {
-					f.TargetPackage = "os"
 					f.TargetName = "FileInfo"
-					_, err := f.loadPackages()
+					_, err := f.loadPackages("os")
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
@@ -223,8 +217,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 			})
 			when("targeting a nonexistent package", func() {
 				it("returns an error", func() {
-					f.TargetPackage = "counterfeiternonexistentpackage"
-					_, err := f.loadPackages()
+					_, err := f.loadPackages("counterfeiternonexistentpackage")
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -232,8 +225,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 			var pkgs []*packages.Package
 			when("targeting the os package", func() {
 				it.Before(func() {
-					f.TargetPackage = "os"
-					pkgs, err = f.loadPackages()
+					pkgs, err = f.loadPackages("os")
 					Expect(err).NotTo(HaveOccurred())
 				})
 

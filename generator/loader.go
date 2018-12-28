@@ -11,13 +11,13 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-func (f *Fake) loadPackages() ([]*packages.Package, error) {
+func (f *Fake) loadPackages(pkgPath string) ([]*packages.Package, error) {
 	log.Println("loading packages...")
 	p, err := packages.Load(&packages.Config{
 		Mode:  packages.LoadSyntax,
 		Dir:   f.WorkingDirectory,
 		Tests: true,
-	}, f.TargetPackage)
+	}, pkgPath)
 	if err != nil {
 		return nil, err
 	}
@@ -62,15 +62,13 @@ func (f *Fake) findPackage(pkgs []*packages.Package) (*packages.Package, error) 
 	if pkg == nil {
 		switch f.Mode {
 		case Package:
-			return nil, fmt.Errorf("cannot find package with name: %s", f.TargetPackage)
+			return nil, fmt.Errorf("cannot find package")
 		case InterfaceOrFunction:
 			return nil, fmt.Errorf("cannot find package with target: %s", f.TargetName)
 		}
 	}
 	f.Target = target
-	f.TargetPackage = imports.VendorlessPath(pkg.PkgPath)
-	t := f.Imports.Add(pkg.Name, f.TargetPackage)
-	f.TargetAlias = t.Alias
+	f.TargetImport = f.Imports.Add(pkg.Name, imports.VendorlessPath(pkg.PkgPath))
 	if f.Mode != Package {
 		f.TargetName = target.Name()
 	}
@@ -88,7 +86,7 @@ func (f *Fake) findPackage(pkgs []*packages.Package) (*packages.Package, error) 
 		log.Printf("Found function with name: [%s]\n", f.TargetName)
 	}
 	if f.Mode == Package {
-		log.Printf("Found package with name: [%s]\n", f.TargetPackage)
+		log.Printf("Found package with name: [%s]\n", f.TargetImport.PkgPath)
 	}
 	return pkg, nil
 }
