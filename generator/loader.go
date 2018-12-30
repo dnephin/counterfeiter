@@ -38,7 +38,7 @@ func (f *Fake) loadPackages() ([]*packages.Package, error) {
 	return p, nil
 }
 
-func (f *Fake) findPackage(pkgs []*packages.Package) error {
+func (f *Fake) findPackage(pkgs []*packages.Package) (*packages.Package, error) {
 	var target *types.TypeName
 	var pkg *packages.Package
 	for i := range pkgs {
@@ -62,13 +62,12 @@ func (f *Fake) findPackage(pkgs []*packages.Package) error {
 	if pkg == nil {
 		switch f.Mode {
 		case Package:
-			return fmt.Errorf("cannot find package with name: %s", f.TargetPackage)
+			return nil, fmt.Errorf("cannot find package with name: %s", f.TargetPackage)
 		case InterfaceOrFunction:
-			return fmt.Errorf("cannot find package with target: %s", f.TargetName)
+			return nil, fmt.Errorf("cannot find package with target: %s", f.TargetName)
 		}
 	}
 	f.Target = target
-	f.Package = pkg
 	f.TargetPackage = imports.VendorlessPath(pkg.PkgPath)
 	t := f.Imports.Add(pkg.Name, f.TargetPackage)
 	f.TargetAlias = t.Alias
@@ -78,7 +77,7 @@ func (f *Fake) findPackage(pkgs []*packages.Package) error {
 
 	if f.Mode == InterfaceOrFunction {
 		if !f.IsInterface() && !f.IsFunction() {
-			return fmt.Errorf("cannot generate an fake for %s because it is not an interface or function", f.TargetName)
+			return nil, fmt.Errorf("cannot generate an fake for %s because it is not an interface or function", f.TargetName)
 		}
 	}
 
@@ -91,7 +90,7 @@ func (f *Fake) findPackage(pkgs []*packages.Package) error {
 	if f.Mode == Package {
 		log.Printf("Found package with name: [%s]\n", f.TargetPackage)
 	}
-	return nil
+	return pkg, nil
 }
 
 // addImportsFor inspects the given type and adds imports to the fake if importable

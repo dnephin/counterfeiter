@@ -67,7 +67,6 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					},
 				}))
 				Expect(f.Function).To(BeZero())
-				Expect(f.Package).NotTo(BeNil())
 				Expect(f.Methods).To(HaveLen(6))
 			})
 		})
@@ -95,7 +94,6 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					},
 				}))
 				Expect(f.Function).NotTo(BeZero())
-				Expect(f.Package).NotTo(BeNil())
 				Expect(f.Methods).To(HaveLen(0))
 				Expect(f.Function.Name).To(Equal("HandlerFunc"))
 				Expect(f.Function.FakeName).To(Equal("FakeHandlerFunc"))
@@ -151,7 +149,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					f.TargetName = "FileInfo"
 					pkgs, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
-					err = f.findPackage(pkgs)
+					_, err = f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -171,7 +169,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					f.TargetName = "HandlerFunc"
 					pkgs, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
-					err = f.findPackage(pkgs)
+					_, err = f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -191,7 +189,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					f.TargetName = "Client"
 					pkgs, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
-					err = f.findPackage(pkgs)
+					_, err = f.findPackage(pkgs)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -246,10 +244,10 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 				})
 
 				it("can find the package with the os package path", func() {
-					err := f.findPackage(pkgs)
+					pkg, err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(f.Package).NotTo(BeNil())
-					Expect(f.Package).To(Equal(pkgs[0]))
+					Expect(pkg).NotTo(BeNil())
+					Expect(pkg).To(Equal(pkgs[0]))
 				})
 
 				it("skips invalid packages", func() {
@@ -258,24 +256,24 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					p = append(p, empty)
 					p = append(p, pkgs...)
 					pkgs = p
-					err := f.findPackage(pkgs)
+					pkg, err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(f.Package).NotTo(BeNil())
-					Expect(f.Package).To(Equal(pkgs[1]))
+					Expect(pkg).NotTo(BeNil())
+					Expect(pkg).To(Equal(pkgs[1]))
 				})
 
 				it("can identify the method set for the package", func() {
-					err := f.findPackage(pkgs)
+					pkg, err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
-					rawMethods := packageMethodSet(f.Package)
+					rawMethods := packageMethodSet(pkg)
 					Expect(len(rawMethods)).To(BeNumerically(">=", 51)) // yes, this is crazy because go 1.11 added a function
 					Expect(len(rawMethods)).To(BeNumerically("<=", 53))
 				})
 
 				it("can load the methods", func() {
-					err := f.findPackage(pkgs)
+					pkg, err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
-					rawMethods := packageMethodSet(f.Package)
+					rawMethods := packageMethodSet(pkg)
 					methods := f.loadMethods(rawMethods)
 					Expect(len(methods)).To(BeNumerically(">=", 51)) // yes, this is crazy because go 1.11 added a function
 					Expect(len(methods)).To(BeNumerically("<=", 53))

@@ -10,7 +10,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/imports"
 )
 
@@ -25,7 +24,6 @@ const (
 
 // Fake is used to generate a Fake implementation of an interface.
 type Fake struct {
-	Package            *packages.Package
 	Target             *types.TypeName
 	Mode               FakeMode
 	DestinationPackage string
@@ -70,7 +68,7 @@ func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName 
 	}
 
 	// TODO: Package mode here
-	err = f.findPackage(pkgs)
+	pkg, err := f.findPackage(pkgs)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +77,7 @@ func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName 
 	case f.IsInterface():
 		f.Methods = f.loadMethods(interfaceMethodSet(f.Target.Type()))
 	case f.Mode == Package:
-		f.Methods = f.loadMethods(packageMethodSet(f.Package))
+		f.Methods = f.loadMethods(packageMethodSet(pkg))
 	case f.IsFunction():
 		if err := f.loadMethodForFunction(); err != nil {
 			return nil, err
