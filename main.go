@@ -12,6 +12,8 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 
+	"golang.org/x/tools/go/packages"
+
 	"github.com/maxbrunsfeld/counterfeiter/arguments"
 	"github.com/maxbrunsfeld/counterfeiter/generator"
 )
@@ -81,11 +83,27 @@ func doGenerate(workingDir string, args arguments.ParsedArguments) ([]byte, erro
 	if args.GenerateInterfaceAndShimFromPackageDirectory {
 		mode = generator.Package
 	}
+
+	if err := loadOutputPackage(workingDir, args.OutputPath); err != nil {
+		return nil, err
+	}
+
 	f, err := generator.NewFake(mode, args.InterfaceName, args.PackagePath, args.FakeImplName, args.DestinationPackageName, workingDir)
 	if err != nil {
 		return nil, err
 	}
 	return f.Generate(true)
+}
+
+func loadOutputPackage(workingDir, dir string) error {
+	p, err := packages.Load(&packages.Config{
+		Mode:  packages.LoadSyntax,
+		Dir:   workingDir,
+		Tests: true,
+	}, filepath.Dir(dir))
+	fmt.Print("Packages ", len(p))
+	fmt.Print(p[0].PkgPath)
+	return err
 }
 
 func printCode(code, outputPath string, printToStdOut bool) {
