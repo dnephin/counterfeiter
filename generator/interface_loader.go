@@ -87,7 +87,6 @@ func interfaceMethodSet(t types.Type) []*rawMethod {
 }
 
 func (f *Fake) loadMethods(methods []*rawMethod) []Method {
-	log.Print("start", len(methods))
 	for _, method := range methods {
 		f.addTypesForMethod(method.Signature)
 	}
