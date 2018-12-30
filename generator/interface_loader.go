@@ -86,23 +86,17 @@ func interfaceMethodSet(t types.Type) []*rawMethod {
 	return result
 }
 
-func (f *Fake) loadMethods() {
-	var methods []*rawMethod
-	if f.Mode == Package {
-		methods = packageMethodSet(f.Package)
-	} else {
-		if !f.IsInterface() || f.Target == nil || f.Target.Type() == nil {
-			return
-		}
-		methods = interfaceMethodSet(f.Target.Type())
+func (f *Fake) loadMethods(methods []*rawMethod) []Method {
+	log.Print("start", len(methods))
+	for _, method := range methods {
+		f.addTypesForMethod(method.Signature)
 	}
 
-	for i := range methods {
-		f.addTypesForMethod(methods[i].Signature)
+	var result []Method
+	for _, method := range methods {
+		result = append(
+			result,
+			methodForSignature(method.Signature, f.Name, f.TargetAlias, method.Func.Name(), f.Imports))
 	}
-
-	for i := range methods {
-		method := methodForSignature(methods[i].Signature, f.Name, f.TargetAlias, methods[i].Func.Name(), f.Imports)
-		f.Methods = append(f.Methods, method)
-	}
+	return result
 }
