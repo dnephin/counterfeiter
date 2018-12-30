@@ -25,7 +25,6 @@ const (
 
 // Fake is used to generate a Fake implementation of an interface.
 type Fake struct {
-	Packages           []*packages.Package
 	Package            *packages.Package
 	Target             *types.TypeName
 	Mode               FakeMode
@@ -65,13 +64,13 @@ func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName 
 	}
 
 	f.Imports.Add("sync", "sync")
-	err := f.loadPackages()
+	pkgs, err := f.loadPackages()
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: Package mode here
-	err = f.findPackage()
+	err = f.findPackage(pkgs)
 	if err != nil {
 		return nil, err
 	}

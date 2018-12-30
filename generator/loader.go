@@ -11,7 +11,7 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-func (f *Fake) loadPackages() error {
+func (f *Fake) loadPackages() ([]*packages.Package, error) {
 	log.Println("loading packages...")
 	p, err := packages.Load(&packages.Config{
 		Mode:  packages.LoadSyntax,
@@ -19,7 +19,7 @@ func (f *Fake) loadPackages() error {
 		Tests: true,
 	}, f.TargetPackage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for i := range p {
 		if len(p[i].Errors) > 0 {
@@ -32,21 +32,20 @@ func (f *Fake) loadPackages() error {
 		}
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	f.Packages = p
-	log.Printf("loaded %v packages\n", len(f.Packages))
-	return nil
+	log.Printf("loaded %v packages\n", len(p))
+	return p, nil
 }
 
-func (f *Fake) findPackage() error {
+func (f *Fake) findPackage(pkgs []*packages.Package) error {
 	var target *types.TypeName
 	var pkg *packages.Package
-	for i := range f.Packages {
-		if f.Packages[i].Types == nil || f.Packages[i].Types.Scope() == nil {
+	for i := range pkgs {
+		if pkgs[i].Types == nil || pkgs[i].Types.Scope() == nil {
 			continue
 		}
-		pkg = f.Packages[i]
+		pkg = pkgs[i]
 		if f.Mode == Package {
 			break
 		}

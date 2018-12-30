@@ -67,7 +67,6 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					},
 				}))
 				Expect(f.Function).To(BeZero())
-				Expect(f.Packages).NotTo(BeNil())
 				Expect(f.Package).NotTo(BeNil())
 				Expect(f.Methods).To(HaveLen(6))
 			})
@@ -96,7 +95,6 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					},
 				}))
 				Expect(f.Function).NotTo(BeZero())
-				Expect(f.Packages).NotTo(BeNil())
 				Expect(f.Package).NotTo(BeNil())
 				Expect(f.Methods).To(HaveLen(0))
 				Expect(f.Function.Name).To(Equal("HandlerFunc"))
@@ -151,9 +149,9 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					f.Mode = InterfaceOrFunction
 					f.TargetPackage = "os"
 					f.TargetName = "FileInfo"
-					err := f.loadPackages()
+					pkgs, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
-					err = f.findPackage()
+					err = f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -171,9 +169,9 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					f.Mode = InterfaceOrFunction
 					f.TargetPackage = "net/http"
 					f.TargetName = "HandlerFunc"
-					err := f.loadPackages()
+					pkgs, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
-					err = f.findPackage()
+					err = f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
@@ -191,9 +189,9 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					f.Mode = InterfaceOrFunction
 					f.TargetPackage = "net/http"
 					f.TargetName = "Client"
-					err := f.loadPackages()
+					pkgs, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
-					err = f.findPackage()
+					err = f.findPackage(pkgs)
 					Expect(err).To(HaveOccurred())
 				})
 
@@ -216,7 +214,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 				it.Before(func() {
 					f.TargetPackage = "os"
 					f.TargetName = "FileInfo"
-					err := f.loadPackages()
+					_, err := f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
@@ -226,48 +224,48 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 			it.Before(func() {
 				f.Mode = Package
 			})
-
 			when("targeting a nonexistent package", func() {
 				it("returns an error", func() {
 					f.TargetPackage = "counterfeiternonexistentpackage"
-					err := f.loadPackages()
+					_, err := f.loadPackages()
 					Expect(err).To(HaveOccurred())
 				})
 			})
 
+			var pkgs []*packages.Package
 			when("targeting the os package", func() {
 				it.Before(func() {
 					f.TargetPackage = "os"
-					err := f.loadPackages()
+					pkgs, err = f.loadPackages()
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				it("can load packages", func() {
-					Expect(len(f.Packages)).To(BeNumerically(">=", 1))
-					Expect(f.Packages[0].Name).To(Equal("os"))
+					Expect(len(pkgs)).To(BeNumerically(">=", 1))
+					Expect(pkgs[0].Name).To(Equal("os"))
 				})
 
 				it("can find the package with the os package path", func() {
-					err := f.findPackage()
+					err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(f.Package).NotTo(BeNil())
-					Expect(f.Package).To(Equal(f.Packages[0]))
+					Expect(f.Package).To(Equal(pkgs[0]))
 				})
 
 				it("skips invalid packages", func() {
 					var p []*packages.Package
 					empty := &packages.Package{}
 					p = append(p, empty)
-					p = append(p, f.Packages...)
-					f.Packages = p
-					err := f.findPackage()
+					p = append(p, pkgs...)
+					pkgs = p
+					err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(f.Package).NotTo(BeNil())
-					Expect(f.Package).To(Equal(f.Packages[1]))
+					Expect(f.Package).To(Equal(pkgs[1]))
 				})
 
 				it("can identify the method set for the package", func() {
-					err := f.findPackage()
+					err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 					methods := packageMethodSet(f.Package)
 					Expect(len(methods)).To(BeNumerically(">=", 51)) // yes, this is crazy because go 1.11 added a function
@@ -275,7 +273,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 				})
 
 				it("can load the methods", func() {
-					err := f.findPackage()
+					err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 					f.loadMethods()
 					Expect(len(f.Methods)).To(BeNumerically(">=", 51)) // yes, this is crazy because go 1.11 added a function
