@@ -25,16 +25,24 @@ const (
 
 // Fake is used to generate a Fake implementation of an interface.
 type Fake struct {
-	Target             *types.TypeName
-	Mode               FakeMode
+	Mode FakeMode
+
+	// DestinationPackage name used in the package clause of the fake file.
 	DestinationPackage string
-	Name               string
-	TargetImport       Import
-	TargetName         string
-	Imports            Imports
-	Methods            []Method
-	Function           Method
-	WorkingDirectory   string
+	// Name of the fake interface or struct, used in the type declaration.
+	Name string
+
+	// Target is the type of the interface, or function to be faked.
+	Target *types.TypeName
+	// TargetName is the name of the interface, function, or package to be faked.
+	TargetName string
+	// TargetImport is the import used to reference the type to be faked.
+	TargetImport Import
+
+	Imports          Imports
+	Methods          []Method
+	Function         Method
+	WorkingDirectory string
 }
 
 // Method is a method of the interface.
