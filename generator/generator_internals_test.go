@@ -265,7 +265,7 @@ func testGenerator(t *testing.T, when spec.G, it spec.S) {
 					pkg, err := f.findPackage(pkgs)
 					Expect(err).NotTo(HaveOccurred())
 					rawMethods := packageMethodSet(pkg)
-					methods := f.loadMethods(rawMethods)
+					methods := loadMethods(rawMethods, f.Imports)
 					Expect(len(methods)).To(BeNumerically(">=", 51)) // yes, this is crazy because go 1.11 added a function
 					Expect(len(methods)).To(BeNumerically("<=", 53))
 					Expect(len(f.Imports.ByAlias)).To(Equal(2))

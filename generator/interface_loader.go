@@ -8,17 +8,6 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
-func (f *Fake) addTypesForMethod(sig *types.Signature) {
-	for i := 0; i < sig.Results().Len(); i++ {
-		ret := sig.Results().At(i)
-		f.addImportsFor(ret.Type())
-	}
-	for i := 0; i < sig.Params().Len(); i++ {
-		param := sig.Params().At(i)
-		f.addImportsFor(param.Type())
-	}
-}
-
 func methodForSignature(sig *types.Signature, methodName string, imports Imports) Method {
 	params := []Param{}
 	for i := 0; i < sig.Params().Len(); i++ {
@@ -84,16 +73,16 @@ func interfaceMethodSet(t types.Type) []*rawMethod {
 	return result
 }
 
-func (f *Fake) loadMethods(methods []*rawMethod) []Method {
+func loadMethods(methods []*rawMethod, imports Imports) []Method {
 	for _, method := range methods {
-		f.addTypesForMethod(method.Signature)
+		imports.addFromMethodSignature(method.Signature)
 	}
 
 	var result []Method
 	for _, method := range methods {
 		result = append(
 			result,
-			methodForSignature(method.Signature, method.Func.Name(), f.Imports))
+			methodForSignature(method.Signature, method.Func.Name(), imports))
 	}
 	return result
 }

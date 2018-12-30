@@ -3,7 +3,9 @@ package generator
 import (
 	"fmt"
 	"go/types"
+	"log"
 	"path"
+	"reflect"
 	"strings"
 
 	"golang.org/x/tools/imports"
@@ -74,4 +76,49 @@ func uniqueAliasForImport(alias string, imports map[string]Import) string {
 // AliasForPackage returns a package alias for the package.
 func (i *Imports) AliasForPackage(p *types.Package) string {
 	return i.ByPkgPath[imports.VendorlessPath(p.Path())].Alias
+}
+
+// addFromType inspects the given type and adds imports to the fake if importable
+// types are found.
+func (i *Imports) addFromType(typ types.Type) {
+	if typ == nil {
+		return
+	}
+
+	switch t := typ.(type) {
+	case *types.Basic:
+		return
+	case *types.Pointer:
+		i.addFromType(t.Elem())
+	case *types.Map:
+		i.addFromType(t.Key())
+		i.addFromType(t.Elem())
+	case *types.Chan:
+		i.addFromType(t.Elem())
+	case *types.Named:
+		if t.Obj() != nil && t.Obj().Pkg() != nil {
+			i.Add(t.Obj().Pkg().Name(), t.Obj().Pkg().Path())
+		}
+	case *types.Slice:
+		i.addFromType(t.Elem())
+	case *types.Array:
+		i.addFromType(t.Elem())
+	case *types.Interface:
+		return
+	case *types.Signature:
+		i.addFromMethodSignature(t)
+	default:
+		log.Printf("!!! WARNING: Missing case for type %s\n", reflect.TypeOf(typ).String())
+	}
+}
+
+func (i *Imports) addFromMethodSignature(sig *types.Signature) {
+	for n := 0; n < sig.Results().Len(); n++ {
+		ret := sig.Results().At(n)
+		i.addFromType(ret.Type())
+	}
+	for n := 0; n < sig.Params().Len(); n++ {
+		param := sig.Params().At(n)
+		i.addFromType(param.Type())
+	}
 }

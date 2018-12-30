@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/types"
 	"log"
-	"reflect"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -92,38 +91,4 @@ func (f *Fake) loadPackage(pkg *packages.Package, target *types.TypeName) error 
 		log.Printf("Found package with name: [%s]\n", f.TargetImport.PkgPath)
 	}
 	return nil
-}
-
-// addImportsFor inspects the given type and adds imports to the fake if importable
-// types are found.
-func (f *Fake) addImportsFor(typ types.Type) {
-	if typ == nil {
-		return
-	}
-
-	switch t := typ.(type) {
-	case *types.Basic:
-		return
-	case *types.Pointer:
-		f.addImportsFor(t.Elem())
-	case *types.Map:
-		f.addImportsFor(t.Key())
-		f.addImportsFor(t.Elem())
-	case *types.Chan:
-		f.addImportsFor(t.Elem())
-	case *types.Named:
-		if t.Obj() != nil && t.Obj().Pkg() != nil {
-			f.Imports.Add(t.Obj().Pkg().Name(), t.Obj().Pkg().Path())
-		}
-	case *types.Slice:
-		f.addImportsFor(t.Elem())
-	case *types.Array:
-		f.addImportsFor(t.Elem())
-	case *types.Interface:
-		return
-	case *types.Signature:
-		f.addTypesForMethod(t)
-	default:
-		log.Printf("!!! WARNING: Missing case for type %s\n", reflect.TypeOf(typ).String())
-	}
 }

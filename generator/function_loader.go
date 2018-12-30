@@ -14,7 +14,7 @@ func (f *Fake) loadMethodForFunction() error {
 	if !ok {
 		return errors.New("target does not have an underlying function signature")
 	}
-	f.addTypesForMethod(sig)
+	f.Imports.addFromMethodSignature(sig)
 	f.Function = methodForSignature(sig, f.TargetName, f.Imports)
 	return nil
 }

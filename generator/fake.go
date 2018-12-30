@@ -78,9 +78,9 @@ func NewFake(fakeMode FakeMode, targetName string, packagePath string, fakeName 
 
 	switch {
 	case f.IsInterface():
-		f.Methods = f.loadMethods(interfaceMethodSet(f.Target.Type()))
+		f.Methods = loadMethods(interfaceMethodSet(f.Target.Type()), f.Imports)
 	case f.Mode == Package:
-		f.Methods = f.loadMethods(packageMethodSet(pkg))
+		f.Methods = loadMethods(packageMethodSet(pkg), f.Imports)
 	case f.IsFunction():
 		if err := f.loadMethodForFunction(); err != nil {
 			return nil, err
