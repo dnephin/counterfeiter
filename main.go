@@ -1,8 +1,6 @@
 package main
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"go/format"
 	"io/ioutil"
@@ -46,31 +44,18 @@ func run() error {
 	if !isDebug() {
 		log.SetOutput(ioutil.Discard)
 	}
-	flag.Parse()
-	args := flag.Args()
-
-	if len(args) < 1 {
-		return errors.New(usage)
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return errors.New("Error - couldn't determine current working directory")
-	}
-
-	argumentParser := arguments.NewParser(cwd)
-	parsedArgs, err := argumentParser.ParseArguments(args...)
+	args, err := arguments.Parse(usage)
 	if err != nil {
 		return err
 	}
-	return generate(cwd, parsedArgs)
+	return generate(args)
 }
 
 func isDebug() bool {
 	return os.Getenv("COUNTERFEITER_DEBUG") != ""
 }
 
-func generate(workingDir string, args arguments.ParsedArguments) error {
+func generate(args arguments.ParsedArguments) error {
 	if err := reportStarting(workingDir, args.OutputPath, args.FakeImplName); err != nil {
 		return err
 	}

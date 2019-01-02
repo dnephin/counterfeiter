@@ -1,6 +1,8 @@
 package arguments
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"go/build"
 	"log"
@@ -11,6 +13,43 @@ import (
 	"strings"
 	"unicode"
 )
+
+type options struct {
+	FakeName string
+	Output   string
+	Package  bool
+}
+
+func setFlags() *options {
+	opts := &options{}
+	flag.StringVar(&opts.FakeName, "fake-name", "",
+		"The name of the fake struct")
+
+	flag.StringVar(&opts.Output, "o", "",
+		"The file or directory to which the generated fake will be written")
+
+	flag.BoolVar(&opts.Package, "p", false,
+		"whether or not to generate a package shim")
+	return opts
+}
+
+func Parse(usage string) (ParsedArguments, error) {
+	opts := setFlags()
+	flag.CommandLine.Usage = func() {
+		fmt.Print(usage)
+	}
+	flag.Parse()
+	args := flag.Args()
+
+	if len(args) < 1 {
+		return errors.New(usage)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return errors.New("Error - couldn't determine current working directory")
+	}
+}
 
 type Parser struct {
 	currentWorkingDir string
